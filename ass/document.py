@@ -1,3 +1,5 @@
+import collections
+import collections.abc
 from datetime import timedelta
 import itertools
 
@@ -245,164 +247,11 @@ class Tag(object):
 
 
 @add_metaclass(_WithFieldMeta)
-class Document(object):
-    """ An ASS document. """
-    SCRIPT_INFO_HEADER = "[Script Info]"
-    STYLE_SSA_HEADER = "[V4 Styles]"
-    STYLE_ASS_HEADER = "[V4+ Styles]"
-    EVENTS_HEADER = "[Events]"
-
-    FORMAT_TYPE = "Format"
-
-    VERSION_ASS = "v4.00+"
-    VERSION_SSA = "v4.00"
-
-    script_type = _Field("ScriptType", str, default=VERSION_ASS)
-    play_res_x = _Field("PlayResX", int, default=640)
-    play_res_y = _Field("PlayResY", int, default=480)
-    wrap_style = _Field("WrapStyle", int, default=0)
-    scaled_border_and_shadow = _Field("ScaledBorderAndShadow", str, default="yes")
-
-    def __init__(self):
-        """ Create an empty ASS document.
-        """
-        self.fields = {}
-
-        self.styles = []
-        self.styles_field_order = Style.DEFAULT_FIELD_ORDER
-
-        self.events = []
-        self.events_field_order = _Event.DEFAULT_FIELD_ORDER
-
-    @classmethod
-    def parse_file(cls, f):
-        """ Parse an ASS document from a file object.
-        """
-        doc = cls()
-
-        section = None
-        for i, line in enumerate(f):
-            if i == 0:
-                bom_seqeunces = ("\xef\xbb\xbf", "\xff\xfe", "\ufeff")
-                if any(line.startswith(seq) for seq in bom_seqeunces):
-                    raise ValueError("BOM detected. Please open the file with the proper encoding,"
-                                     " usually 'utf_8_sig'")
-
-            line = line.strip()
-            if not line or line.startswith(';'):
-                continue
-
-            if line.startswith('[') and line.endswith(']'):
-                section = line
-                field_order = None
-                continue
-
-            if section is None:
-                raise ValueError('Content outside of any section.')
-
-            if section.lower() == doc.SCRIPT_INFO_HEADER.lower():
-                # [Script Info]
-                if ':' not in line:
-                    # illformed, ignore
-                    continue
-
-                field_name, _, field = line.partition(":")
-                field = field.lstrip()
-
-                if field_name in Document._field_mappings:
-                    field = Document._field_mappings[field_name].parse(field)
-
-                doc.fields[field_name] = field
-
-            elif section.lower() in (doc.STYLE_SSA_HEADER.lower(),
-                                     doc.STYLE_ASS_HEADER.lower()):
-                # [V4 Styles] / [V4+ Styles]
-                if ':' not in line:
-                    continue
-
-                type_name, _, line = line.partition(":")
-                line = line.lstrip()
-
-                if field_order is None:
-                    # Format: ...
-                    if type_name.lower() != Document.FORMAT_TYPE.lower():
-                        raise ValueError("expected format line in styles")
-
-                    field_order = [field.strip() for field in line.split(",")]
-                    doc.styles_field_order = field_order
-                else:
-                    # Style: ...
-                    if type_name.lower() != Style.TYPE.lower():
-                        raise ValueError("expected style line in styles")
-
-                    doc.styles.append(Style.parse(line, field_order))
-
-            elif section.lower() == doc.EVENTS_HEADER.lower():
-                # [Events]
-                if ':' not in line:
-                    continue
-
-                type_name, _, line = line.partition(":")
-                line = line.lstrip()
-
-                if field_order is None:
-                    # Format: ...
-                    if type_name.lower() != Document.FORMAT_TYPE.lower():
-                        raise ValueError("expected format line in events")
-
-                    field_order = [field.strip() for field in line.split(",")]
-                    doc.events_field_order = field_order
-                else:
-                    # Dialogue: ...
-                    # Comment: ...
-                    # etc.
-                    doc.events.append(({
-                        "Dialogue": Dialogue,  # noqa: E241
-                        "Comment":  Comment,   # noqa: E241
-                        "Picture":  Picture,   # noqa: E241
-                        "Sound":    Sound,     # noqa: E241
-                        "Movie":    Movie,     # noqa: E241
-                        "Command":  Command    # noqa: E241
-                    })[type_name].parse(line, field_order))
-
-            else:
-                # unknown sections
-                continue
-
-        return doc
-
-    def dump_file(self, f):
-        """ Dump this ASS document to a file object.
-        """
-        if getattr(f, 'encoding', 'utf_8_sig') != 'utf_8_sig':
-            import warnings
-            warnings.warn("It is recommended to write UTF-8 with BOM"
-                          " using the 'utf_8_sig' encoding")
-
-        f.write(Document.SCRIPT_INFO_HEADER + "\n")
-        for k in itertools.chain(
-            (field for field in self.DEFAULT_FIELD_ORDER if field in self.fields),
-            (field for field in self.fields if field not in self._field_mappings),
-        ):
-            f.write(k + ": " + _Field.dump(self.fields[k]) + "\n")
-        f.write("\n")
-
-        f.write(Document.STYLE_ASS_HEADER + "\n")
-        f.write(Document.FORMAT_TYPE + ": " + ", ".join(self.styles_field_order) + "\n")
-        for style in self.styles:
-            f.write(style.dump_with_type(self.styles_field_order) + "\n")
-        f.write("\n")
-
-        f.write(Document.EVENTS_HEADER + "\n")
-        f.write(Document.FORMAT_TYPE + ": " + ", ".join(self.events_field_order) + "\n")
-        for event in self.events:
-            f.write(event.dump_with_type(self.events_field_order) + "\n")
-        f.write("\n")
-
-
-@add_metaclass(_WithFieldMeta)
 class _Line(object):
-    def __init__(self, *args, **kwargs):
+    # to be overridden in subclasses or through the type_name argument
+    TYPE = None
+
+    def __init__(self, *args, type_name=None, **kwargs):
         self.fields = {f.name: f.default for f in self._field_defs}
 
         for k, v in zip(self.DEFAULT_FIELD_ORDER, args):
@@ -413,6 +262,9 @@ class _Line(object):
                 setattr(self, k, v)
             else:
                 self.fields[k] = v
+
+        if self.TYPE is None:
+            self.TYPE = type_name
 
     def dump(self, field_order=None):
         """ Dump an ASS line into text format. Has an optional field order
@@ -429,7 +281,7 @@ class _Line(object):
         return self.TYPE + ": " + self.dump(field_order)
 
     @classmethod
-    def parse(cls, line, field_order=None):
+    def parse(cls, type_name, line, field_order=None):
         """ Parse an ASS line from text format. Has an optional field order
         parameter in case you have some wonky format.
         """
@@ -448,8 +300,10 @@ class _Line(object):
                 field = cls._field_mappings[field_name].parse(field)
             fields[field_name] = field
 
-        return cls(**fields)
+        return cls(**fields, type_name=type_name)
 
+class Unknown(_Line):
+    value = _Field("Value", str, default="")
 
 class Style(_Line):
     """ A style line in ASS.
@@ -578,3 +432,245 @@ class Command(_Event):
     """ A command event. Not widely supported.
     """
     TYPE = "Command"
+
+class CaseInsensitiveOrderedDict(collections.abc.MutableMapping):
+    """A case insensitive ordered dictionary that preserves the original casing."""
+
+    def __init__(self, *args, **kwargs):
+        self._dict = collections.OrderedDict(*args, **kwargs)
+        self._case_mapping = {key.lower(): key for key in self._dict}
+
+        if len(self._case_mapping) != len(self._dict):
+            raise ValueError("Duplicate keys provided for case insensitive dict")
+
+    def __getitem__(self, key):
+        return self._dict[self._case_mapping[key.lower()]]
+
+    def __setitem__(self, key, value):
+        if key.lower() not in self._case_mapping:
+            self._case_mapping[key.lower()] = key
+        self._dict[self._case_mapping[key.lower()]] = value
+
+    def __delitem__(self, key):
+        del self._dict[self._case_mapping[key.lower()]]
+        del self._case_mapping[key.lower()]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return repr(self._dict)
+
+    def __str__(self):
+        return str(self._dict)
+
+class LineSection(collections.abc.MutableSequence):
+    FORMAT_TYPE = "Format"
+    line_parsers = None
+    field_order = None
+
+    def __init__(self, section, lines=None):
+        self.section = section
+        self._lines = [] if lines is None else lines
+
+    def dump(self):
+        yield "[{}]".format(self.section)
+
+        if self.field_order is not None:
+            yield "{}: {}".format(LineSection.FORMAT_TYPE, ", ".join(self.field_order))
+
+        for line in self._lines:
+            yield line.dump_with_type(self.field_order)
+
+    def add_line(self, type_name, line):
+        # field order is optional
+        if type_name.lower() == LineSection.FORMAT_TYPE.lower():
+            self.field_order = [field.strip() for field in line.split(",")]
+        else:
+            if self.line_parsers is not None and type_name.lower() not in self.line_parsers:
+                raise ValueError("unexpected {} line in {}".format(type_name, self.section))
+
+            parser = (self.line_parsers[type_name.lower()]
+                      if self.line_parsers is not None
+                      else Unknown)
+            self._lines.append(parser.parse(type_name, line, self.field_order))
+
+    def __getitem__(self, index):
+        return self._lines[index]
+
+    def __setitem__(self, index, val):
+        self._lines[index] = val
+
+    def __delitem__(self, index):
+        del self._lines[index]
+
+    def __len__(self):
+        return len(self._lines)
+
+    def insert(self, index, val):
+        self._lines.insert(index, val)
+
+
+class FieldSection(collections.abc.MutableMapping):
+    # avoid metaclass conflict by keeping track of fields in a dict instead
+    FIELDS = {}
+
+    def __init__(self, section, fields=None):
+        self.section = section
+        self._fields = collections.OrderedDict() if fields is None else fields
+
+    def add_line(self, field_name, field):
+        if field_name in self.FIELDS:
+            field = self.FIELDS[field_name].parse(field)
+
+        self._fields[field_name] = field
+
+    def dump(self):
+        yield "[{}]".format(self.section)
+
+        for k, v in self._fields.items():
+            yield "{}: {}".format(k, _Field.dump(v))
+
+    def __getitem__(self, key):
+        return self._fields[key]
+
+    def __setitem__(self, key, value):
+        self._fields[key] = value
+
+    def __delitem__(self, key):
+        del self._fields[key]
+
+    def __iter__(self):
+        return iter(self._fields)
+
+    def __len__(self):
+        return len(self._fields)
+
+
+class EventsSection(LineSection):
+    field_order = Dialogue.DEFAULT_FIELD_ORDER
+    line_parsers = {
+        "dialogue": Dialogue,  # noqa: E241
+        "comment":  Comment,   # noqa: E241
+        "picture":  Picture,   # noqa: E241
+        "sound":    Sound,     # noqa: E241
+        "movie":    Movie,     # noqa: E241
+        "command":  Command    # noqa: E241
+    }
+
+class StylesSection(LineSection):
+    field_order = Style.DEFAULT_FIELD_ORDER
+    line_parsers = {
+        "style": Style
+    }
+
+class ScriptInfoSection(FieldSection):
+    VERSION_ASS = "v4.00+"
+    VERSION_SSA = "v4.00"
+    FIELDS = {
+        "ScriptType": _Field("ScriptType", str, default=VERSION_ASS),
+        "PlayResX": _Field("PlayResX", int, default=640),
+        "PlayResY": _Field("PlayResY", int, default=480),
+        "WrapStyle": _Field("WrapStyle", int, default=0),
+        "ScaledBorderAndShadow": _Field("ScaledBorderAndShadow", str, default="yes")
+    }
+
+
+@add_metaclass(_WithFieldMeta)
+class Document(object):
+    """ An ASS document. """
+    SCRIPT_INFO_HEADER = "Script Info"
+    STYLE_SSA_HEADER = "V4 Styles"
+    STYLE_ASS_HEADER = "V4+ Styles"
+    EVENTS_HEADER = "Events"
+
+    SECTIONS = CaseInsensitiveOrderedDict({
+        SCRIPT_INFO_HEADER: ScriptInfoSection,
+        STYLE_SSA_HEADER: StylesSection,
+        STYLE_ASS_HEADER: StylesSection,
+        EVENTS_HEADER: EventsSection
+    })
+
+    # backwards compatibility
+    script_type = ScriptInfoSection.FIELDS["ScriptType"]
+    play_res_x = ScriptInfoSection.FIELDS["PlayResX"]
+    play_res_y = ScriptInfoSection.FIELDS["PlayResY"]
+    wrap_style = ScriptInfoSection.FIELDS["WrapStyle"]
+    scaled_border_and_shadow = ScriptInfoSection.FIELDS["ScaledBorderAndShadow"]
+
+    def __init__(self):
+        """ Create an empty ASS document.
+        """
+        self.sections = CaseInsensitiveOrderedDict(
+            [(header, self.SECTIONS[header](header)) for header in (self.SCRIPT_INFO_HEADER,
+                                                                    self.STYLE_ASS_HEADER,
+                                                                    self.EVENTS_HEADER)])
+        self.fields = self.sections[self.SCRIPT_INFO_HEADER]
+        self.styles = self.sections[self.STYLE_ASS_HEADER]
+        self.events = self.sections[self.EVENTS_HEADER]
+
+    @classmethod
+    def parse_file(cls, f):
+        """ Parse an ASS document from a file object.
+        """
+        doc = cls()
+
+        section = None
+        seen_sections = CaseInsensitiveOrderedDict()
+        for i, line in enumerate(f):
+            if i == 0:
+                bom_seqeunces = ("\xef\xbb\xbf", "\xff\xfe", "\ufeff")
+                if any(line.startswith(seq) for seq in bom_seqeunces):
+                    raise ValueError("BOM detected. Please open the file with the proper encoding,"
+                                     " usually 'utf_8_sig'")
+
+            line = line.strip()
+            if not line or line.startswith(';'):
+                continue
+
+            if line.startswith('[') and line.endswith(']'):
+                section_name = line[1:-1]
+                # use existing section if available (pre-generated script info, styles, events)
+                if section_name in doc.sections:
+                    section = doc.sections[section_name]
+                else:
+                    section = doc.SECTIONS.get(section_name, LineSection)(section_name)
+
+                seen_sections[section_name] = section
+                continue
+
+            if section is None:
+                raise ValueError('Content outside of any section.')
+
+            if ':' not in line:
+                # illformed, ignore
+                continue
+
+            type_name, _, line = line.partition(":")
+            line = line.lstrip()
+            section.add_line(type_name, line)
+
+        # append default sections not present in the parsed file
+        for section_name, section in doc.sections.items():
+            if section_name not in seen_sections:
+                seen_sections[section_name] = section
+
+        doc.sections = seen_sections
+
+        return doc
+
+    def dump_file(self, f):
+        """ Dump this ASS document to a file object.
+        """
+        if getattr(f, 'encoding', 'utf_8_sig') != 'utf_8_sig':
+            import warnings
+            warnings.warn("It is recommended to write UTF-8 with BOM"
+                          " using the 'utf_8_sig' encoding")
+
+        for section in self.sections.values():
+            f.write("\n".join(section.dump()))
+            f.write("\n\n")
+
