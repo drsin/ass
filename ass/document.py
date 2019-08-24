@@ -608,9 +608,11 @@ class Document(object):
     STYLE_SSA_HEADER = "V4 Styles"
     STYLE_ASS_HEADER = "V4+ Styles"
     EVENTS_HEADER = "Events"
+    AEGISUB_PROJECT_HEADER = "Aegisub Project Garbage"
 
     SECTIONS = CaseInsensitiveOrderedDict({
         SCRIPT_INFO_HEADER: ScriptInfoSection,
+        AEGISUB_PROJECT_HEADER: FieldSection,
         STYLE_SSA_HEADER: StylesSection,
         STYLE_ASS_HEADER: StylesSection,
         EVENTS_HEADER: EventsSection
