@@ -498,6 +498,11 @@ class LineSection(collections.abc.MutableSequence):
                       else Unknown)
             self._lines.append(parser.parse(type_name, line, self.field_order))
 
+    def set_data(self, lines):
+        if not isinstance(lines, collections.abc.MutableSequence):
+            raise ValueError("Lines must be a mutable list")
+        self._lines = lines
+
     def __getitem__(self, index):
         return self._lines[index]
 
@@ -533,6 +538,11 @@ class FieldSection(collections.abc.MutableMapping):
 
         for k, v in self._fields.items():
             yield "{}: {}".format(k, _Field.dump(v))
+
+    def set_data(self, fields):
+        if not isinstance(fields, collections.abc.MutableMapping):
+            raise ValueError("Fields must be a mutable mapping")
+        self._fields = fields
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -578,6 +588,18 @@ class ScriptInfoSection(FieldSection):
         "ScaledBorderAndShadow": _Field("ScaledBorderAndShadow", str, default="yes")
     }
 
+def script_property(header):
+    def getter(self):
+        return self.sections[header]
+
+    def setter(self, value):
+        section_type = self.SECTIONS[header]
+        if isinstance(value, section_type):
+            self.sections[header] = value
+        else:
+            self.sections[header].set_data(value)
+
+    return property(getter, setter)
 
 @add_metaclass(_WithFieldMeta)
 class Document(object):
@@ -608,9 +630,10 @@ class Document(object):
             [(header, self.SECTIONS[header](header)) for header in (self.SCRIPT_INFO_HEADER,
                                                                     self.STYLE_ASS_HEADER,
                                                                     self.EVENTS_HEADER)])
-        self.fields = self.sections[self.SCRIPT_INFO_HEADER]
-        self.styles = self.sections[self.STYLE_ASS_HEADER]
-        self.events = self.sections[self.EVENTS_HEADER]
+
+    fields = script_property(SCRIPT_INFO_HEADER)
+    styles = script_property(STYLE_ASS_HEADER)
+    events = script_property(EVENTS_HEADER)
 
     @classmethod
     def parse_file(cls, f):
