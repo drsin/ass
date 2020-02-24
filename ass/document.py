@@ -1,7 +1,8 @@
 from .data import _WithFieldMeta
-from .data import *  # noqa: F40
 from .section import ScriptInfoSection, FieldSection, StylesSection, EventsSection, LineSection
 from ._util import CaseInsensitiveOrderedDict
+
+from .data import *  # noqa: F40  # re-export for compatibility
 
 
 def _section_property(header):
@@ -34,6 +35,10 @@ class Document(object, metaclass=_WithFieldMeta):
         EVENTS_HEADER: EventsSection,
     })
 
+    DEFAULT_SECTION_HEADERS = [SCRIPT_INFO_HEADER,
+                               STYLE_ASS_HEADER,
+                               EVENTS_HEADER]
+
     # backwards compatibility
     script_type = ScriptInfoSection.FIELDS["ScriptType"]
     play_res_x = ScriptInfoSection.FIELDS["PlayResX"]
@@ -45,9 +50,7 @@ class Document(object, metaclass=_WithFieldMeta):
         """ Create an empty ASS document.
         """
         self.sections = CaseInsensitiveOrderedDict(
-            [(header, self.SECTIONS[header](header)) for header in (self.SCRIPT_INFO_HEADER,
-                                                                    self.STYLE_ASS_HEADER,
-                                                                    self.EVENTS_HEADER)])
+            [(header, self.SECTIONS[header](header)) for header in self.DEFAULT_SECTION_HEADERS])
 
     fields = _section_property(SCRIPT_INFO_HEADER)
     styles = _section_property(STYLE_ASS_HEADER)

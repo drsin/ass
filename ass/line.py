@@ -16,6 +16,7 @@ __all__ = (
 
 class _Line(object, metaclass=_WithFieldMeta):
     # to be overridden in subclasses or through the type_name argument
+    # TODO remove; it's primarily kept for backwards compat but not good architecture
     TYPE = None
 
     def __init__(self, *args, type_name=None, **kwargs):
@@ -123,6 +124,7 @@ class Dialogue(_Event):
     TYPE = "Dialogue"
 
     def parse_parts(self):
+        # TODO remove; it's mostly broken
         parts = []
 
         current = []
