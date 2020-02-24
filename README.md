@@ -1,66 +1,85 @@
 # python-ass
 
-A library for parsing and manipulating Advanced SubStation Alpha subtitle
-files.
+A library for parsing and manipulating
+Advanced SubStation Alpha subtitle files.
 
 ## Documents
 
-**test.ass**
-
-    [Script Info]
-    ScriptType: v4.00+
-
-    [V4+ Styles]
-    Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-    Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
-
-    [Events]
-    Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-    Dialogue: 0,0:00:00.00,0:00:05.00,Default,,0,0,0,,hello!
+Example file: [**tests/test.ass**](./tests/test.ass)
 
 You can parse the file:
 
-    >>> import ass
-    >>> with open("test.ass", "r") as f:
-    ...     doc = ass.parse(f)
-    ...
+```py
+>>> import ass
+>>> with open("tests/test.ass", encoding='utf_8_sig') as f:
+...     doc = ass.parse(f)
+...
+```
 
-Access some of its styles:
+Access its meta info:
 
-    >>> doc.styles
-    [<ass.document.Style object at ...>]
-    >>> doc.styles[0].fontname
-    'Arial'
-    >>> doc.styles[0].primary_color  # "color", not "colour"
-    Color(r=0xff, g=0xff, b=0xff, a=0x00)
+```py
+>>> doc.info
+ScriptInfoSection('Script Info', OrderedDict([('ScriptType', 'v4.00+'), ('PlayResX', 500), ('PlayResY', 500)]))
+>>> doc.info['PlayResX']
+500
+```
 
-Or its event lines:
+Access its styles:
 
-    >>> doc.events
-    [<ass.document.Dialogue object at ...>]
-    >>> doc.events[0].text
-    'hello!'
+```py
+>>> doc.styles
+StylesSection('V4+ Styles', [Style(name='Default', fontname='Arial', fontsize=20.0, primary_color=Color(r=0xff, g=0xff, b=0xff, a=0x00), secondary_color=Color(r=0xff, g=0x00, b=0x00, a=0x00), outline_color=Color(r=0x00, g=0x00, b=0x00, a=0x00), back_color=Color(r=0x00, g=0x00, b=0x00, a=0x00), bold=False, italic=False, underline=False, strike_out=False, scale_x=100.0, scale_y=100.0, spacing=0.0, angle=0.0, border_style=1, outline=1.0, shadow=2.0, alignment=5, margin_l=10, margin_r=10, margin_v=10, encoding=1)])
+>>> doc.styles[0].fontname
+'Arial'
+>>> doc.styles[0].primary_color  # "color", not "colour"
+Color(r=0xff, g=0xff, b=0xff, a=0x00)
+```
 
-You can dump them back out into ASS format, too:
+Access its event lines:
 
-    >>> doc.events[0].dump()
-    '0,0:00:00.00,0:00:05.00,Default,,0,0,0,,hello!'
+```py
+>>> doc.events
+EventsSection('Events', [Dialogue(layer=0, start=datetime.timedelta(0), end=datetime.timedelta(seconds=5), style='Default', name='', margin_l=0, margin_r=0, margin_v=0, effect='', text='{\\3c&H0000FF}this is a test\\N{\\3c&H00FF00}this is a test\\N{\\3c&HFF0000}this is a test'), ...])
+>>> doc.events[0].text
+'{\\3c&H0000FF}this is a test\\N{\\3c&H00FF00}this is a test\\N{\\3c&HFF0000}this is a test'
+```
+
+Or any other section data:
+
+```py
+>>> list(doc.sections.keys())
+['Script Info', 'Aegisub Project Garbage', 'Custom Section', 'V4+ Styles', 'Events', 'Aegisub Extradata']
+>>> doc.sections['Aegisub Project Garbage']['Scroll Position']
+'30'
+```
+
+You can dump everything out into ASS format, too:
+
+```py
+>>> doc.events[0].dump()
+'0,0:00:00.00,0:00:05.00,Default,,0,0,0,,{\\3c&H0000FF}this is a test\\N{\\3c&H00FF00}this is a test\\N{\\3c&HFF0000}this is a test'
+```
 
 Or maybe the whole file:
 
-    >>> with open("out.ass", "w") as f:
-    ...     doc.dump_file(f)
-    ...
+```py
+>>> with open("out.ass", "w", encoding='utf_8_sig') as f:
+...     doc.dump_file(f)
+...
+```
 
 
 ## Tags
 
 For parsing ASS tags, you may want to consider `ass-tag-parser`:
 <https://pypi.org/project/ass-tag-parser/>
-(on [GitHub](https://github.com/rr-/ass_tag_parser))
+(on [GitHub](https://github.com/rr-/ass_tag_parser)).
 
 
 ## Rendering
+
+*The following has been unmaintained for years.*
 
 python-ass can use libass for rendering.
 
