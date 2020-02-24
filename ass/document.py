@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 from datetime import timedelta
-import itertools
 
 
 class Color(object):
@@ -234,7 +233,7 @@ class Tag(object):
                 # \p0
                 if not keep_drawing_commands and part.name == "p" and part.params == [1]:
                     for part2 in it:
-                        if isinstance(part2, Tag) and part2.name == "p"and part2.params == [0]:
+                        if isinstance(part2, Tag) and part2.name == "p" and part2.params == [0]:
                             break
             else:
                 text_parts.append(part)
@@ -302,8 +301,10 @@ class _Line(object):
 
         return cls(**fields, type_name=type_name)
 
+
 class Unknown(_Line):
     value = _Field("Value", str, default="")
+
 
 class Style(_Line):
     """ A style line in ASS.
@@ -433,6 +434,7 @@ class Command(_Event):
     """
     TYPE = "Command"
 
+
 class CaseInsensitiveOrderedDict(collections.abc.MutableMapping):
     """A case insensitive ordered dictionary that preserves the original casing."""
 
@@ -466,6 +468,7 @@ class CaseInsensitiveOrderedDict(collections.abc.MutableMapping):
 
     def __str__(self):
         return str(self._dict)
+
 
 class LineSection(collections.abc.MutableSequence):
     FORMAT_TYPE = "Format"
@@ -571,11 +574,13 @@ class EventsSection(LineSection):
         "command":  Command    # noqa: E241
     }
 
+
 class StylesSection(LineSection):
     field_order = Style.DEFAULT_FIELD_ORDER
     line_parsers = {
         "style": Style
     }
+
 
 class ScriptInfoSection(FieldSection):
     VERSION_ASS = "v4.00+"
@@ -587,6 +592,7 @@ class ScriptInfoSection(FieldSection):
         "WrapStyle": _Field("WrapStyle", int, default=0),
         "ScaledBorderAndShadow": _Field("ScaledBorderAndShadow", str, default="yes")
     }
+
 
 def script_property(header):
     def getter(self):
@@ -600,6 +606,7 @@ def script_property(header):
             self.sections[header].set_data(value)
 
     return property(getter, setter)
+
 
 @add_metaclass(_WithFieldMeta)
 class Document(object):
@@ -698,4 +705,3 @@ class Document(object):
         for section in self.sections.values():
             f.write("\n".join(section.dump()))
             f.write("\n\n")
-
