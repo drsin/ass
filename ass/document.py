@@ -1,4 +1,3 @@
-from .data import _WithFieldMeta
 from .section import ScriptInfoSection, FieldSection, StylesSection, EventsSection, LineSection
 from ._util import CaseInsensitiveOrderedDict
 
@@ -19,7 +18,17 @@ def _section_property(header):
     return property(getter, setter)
 
 
-class Document(object, metaclass=_WithFieldMeta):
+def _info_property(field):
+    def getter(self):
+        return self.fields[field]
+
+    def setter(self, value):
+        self.fields[field] = value
+
+    return property(getter, setter)
+
+
+class Document(object):
     """ An ASS document. """
     SCRIPT_INFO_HEADER = "Script Info"
     STYLE_SSA_HEADER = "V4 Styles"
@@ -39,20 +48,22 @@ class Document(object, metaclass=_WithFieldMeta):
                                STYLE_ASS_HEADER,
                                EVENTS_HEADER]
 
-    # backwards compatibility
-    script_type = ScriptInfoSection.FIELDS["ScriptType"]
-    play_res_x = ScriptInfoSection.FIELDS["PlayResX"]
-    play_res_y = ScriptInfoSection.FIELDS["PlayResY"]
-    wrap_style = ScriptInfoSection.FIELDS["WrapStyle"]
-    scaled_border_and_shadow = ScriptInfoSection.FIELDS["ScaledBorderAndShadow"]
-
     def __init__(self):
         """ Create an empty ASS document.
         """
         self.sections = CaseInsensitiveOrderedDict(
             [(header, self.SECTIONS[header](header)) for header in self.DEFAULT_SECTION_HEADERS])
 
-    fields = _section_property(SCRIPT_INFO_HEADER)
+    # backwards compatibility
+    script_type = _info_property("ScriptType")
+    play_res_x = _info_property("PlayResX")
+    play_res_y = _info_property("PlayResY")
+    wrap_style = _info_property("WrapStyle")
+    scaled_border_and_shadow = _info_property("ScaledBorderAndShadow")
+
+    # backwards compatibility and convenience accessors
+    info = _section_property(SCRIPT_INFO_HEADER)
+    fields = info
     styles = _section_property(STYLE_ASS_HEADER)
     events = _section_property(EVENTS_HEADER)
 
