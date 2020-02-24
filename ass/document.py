@@ -445,6 +445,12 @@ class CaseInsensitiveOrderedDict(collections.abc.MutableMapping):
         if len(self._case_mapping) != len(self._dict):
             raise ValueError("Duplicate keys provided for case insensitive dict")
 
+    def __contains__(self, key):
+        if key.lower() in self._case_mapping:
+            return self._case_mapping[key.lower()] in self._dict
+        else:
+            return False
+
     def __getitem__(self, key):
         return self._dict[self._case_mapping[key.lower()]]
 
