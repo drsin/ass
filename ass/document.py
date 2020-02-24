@@ -374,7 +374,8 @@ class Document(object):
     def dump_file(self, f):
         """ Dump this ASS document to a file object.
         """
-        if getattr(f, 'encoding', 'utf_8_sig') != 'utf_8_sig':
+        encoding = getattr(f, 'encoding')
+        if encoding and encoding != 'utf_8_sig':
             import warnings
             warnings.warn("It is recommended to write UTF-8 with BOM"
                           " using the 'utf_8_sig' encoding")
