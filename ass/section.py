@@ -17,12 +17,12 @@ class LineSection(abc.MutableSequence):
     line_parsers = None
     field_order = None
 
-    def __init__(self, section, lines=None):
-        self.section = section
+    def __init__(self, name, lines=None):
+        self.name = name
         self._lines = [] if lines is None else lines
 
     def dump(self):
-        yield "[{}]".format(self.section)
+        yield "[{}]".format(self.name)
 
         if self.field_order is not None:
             yield "{}: {}".format(LineSection.FORMAT_TYPE, ", ".join(self.field_order))
@@ -30,18 +30,18 @@ class LineSection(abc.MutableSequence):
         for line in self._lines:
             yield line.dump_with_type(self.field_order)
 
-    def add_line(self, type_name, line):
+    def add_line(self, type_name, raw_line):
         # field order is optional
         if type_name.lower() == LineSection.FORMAT_TYPE.lower():
-            self.field_order = [field.strip() for field in line.split(",")]
+            self.field_order = [field.strip() for field in raw_line.split(",")]
         else:
             if self.line_parsers is not None and type_name.lower() not in self.line_parsers:
-                raise ValueError("unexpected {} line in {}".format(type_name, self.section))
+                raise ValueError("unexpected {} line in {}".format(type_name, self.name))
 
             parser = (self.line_parsers[type_name.lower()]
                       if self.line_parsers is not None
                       else Unknown)
-            self._lines.append(parser.parse(type_name, line, self.field_order))
+            self._lines.append(parser.parse(type_name, raw_line, self.field_order))
 
     def set_data(self, lines):
         if not isinstance(lines, abc.MutableSequence):
@@ -68,8 +68,8 @@ class FieldSection(abc.MutableMapping):
     # avoid metaclass conflict by keeping track of fields in a dict instead
     FIELDS = {}
 
-    def __init__(self, section, fields=None):
-        self.section = section
+    def __init__(self, name, fields=None):
+        self.name = name
         self._fields = OrderedDict() if fields is None else fields
 
     def add_line(self, field_name, field):
@@ -79,7 +79,7 @@ class FieldSection(abc.MutableMapping):
         self._fields[field_name] = field
 
     def dump(self):
-        yield "[{}]".format(self.section)
+        yield "[{}]".format(self.name)
 
         for k, v in self._fields.items():
             yield "{}: {}".format(k, _Field.dump(v))
