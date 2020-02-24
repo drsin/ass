@@ -140,19 +140,27 @@ class _WithFieldMeta(type):
         newcls = type.__new__(cls, name, bases, dct)
 
         field_defs = []
+        field_mappings = {}
+        field_attributes = {}
         for base in bases:
             if hasattr(base, "_field_defs"):
                 field_defs.extend(base._field_defs)
-        field_defs.extend(sorted((f for f in dct.values() if isinstance(f, _Field)),
-                                 key=lambda f: f._creation_order))
-        newcls._field_defs = tuple(field_defs)
-
-        field_mappings = {}
-        for base in bases:
             if hasattr(base, "_field_mappings"):
                 field_mappings.update(base._field_mappings)
-        field_mappings.update({f.name: f for f in field_defs})
+            if hasattr(base, "_field_attributes"):
+                field_attributes.update(base._field_attributes)
+
+        new_field_defs = []
+        for name, f in dct.items():
+            if isinstance(f, _Field):
+                new_field_defs.append(f)
+                field_mappings[f.name] = f
+                field_attributes[f.name] = name
+
+        field_defs.extend(sorted(new_field_defs, key=lambda f: f._creation_order))
+        newcls._field_defs = tuple(field_defs)
         newcls._field_mappings = field_mappings
+        newcls._field_attributes = field_attributes
 
         newcls.DEFAULT_FIELD_ORDER = tuple(f.name for f in field_defs)
         return newcls

@@ -71,7 +71,8 @@ class _Line(object, metaclass=_WithFieldMeta):
         return cls(**fields, type_name=type_name)
 
     def __repr__(self):
-        params = ", ".join("{}={!r}".format(k, self.fields[k]) for k in self.DEFAULT_FIELD_ORDER)
+        params = ", ".join("{}={!r}".format(self._field_attributes[name], self.fields[name])
+                           for name in self.DEFAULT_FIELD_ORDER)
         return "{}({})".format(self.__class__.__name__, params)
 
 
