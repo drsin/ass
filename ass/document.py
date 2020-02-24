@@ -160,48 +160,6 @@ class _WithFieldMeta(type):
         return newcls
 
 
-def add_metaclass(metaclass):
-    """
-    Decorate a class to replace it with a metaclass-constructed version.
-
-    Usage:
-
-    @add_metaclass(MyMeta)
-    class MyClass(object):
-        ...
-
-    That code produces a class equivalent to
-
-    class MyClass(object, metaclass=MyMeta):
-        ...
-
-    on Python 3 or
-
-    class MyClass(object):
-        __metaclass__ = MyMeta
-
-    on Python 2
-
-    Requires Python 2.6 or later (for class decoration). For use on Python
-    2.5 and earlier, use the legacy syntax:
-
-    class MyClass(object):
-        ...
-    MyClass = add_metaclass(MyClass)
-
-    Taken from six.py.
-    https://bitbucket.org/gutworth/six/src/default/six.py
-    """
-    def wrapper(cls):
-        orig_vars = cls.__dict__.copy()
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        for slots_var in orig_vars.get('__slots__', ()):
-            orig_vars.pop(slots_var)
-        return metaclass(cls.__name__, cls.__bases__, orig_vars)
-    return wrapper
-
-
 class Tag(object):
     """ A tag in ASS, e.g. {\\b1}. Multiple can be used like {\\b1\\i1}. """
 
@@ -245,8 +203,7 @@ class Tag(object):
         raise NotImplementedError
 
 
-@add_metaclass(_WithFieldMeta)
-class _Line(object):
+class _Line(object, metaclass=_WithFieldMeta):
     # to be overridden in subclasses or through the type_name argument
     TYPE = None
 
@@ -614,8 +571,7 @@ def script_property(header):
     return property(getter, setter)
 
 
-@add_metaclass(_WithFieldMeta)
-class Document(object):
+class Document(object, metaclass=_WithFieldMeta):
     """ An ASS document. """
     SCRIPT_INFO_HEADER = "Script Info"
     STYLE_SSA_HEADER = "V4 Styles"
