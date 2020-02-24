@@ -63,6 +63,9 @@ class LineSection(abc.MutableSequence):
     def insert(self, index, val):
         self._lines.insert(index, val)
 
+    def __repr__(self):
+        return "{}({!r}, {!r})".format(self.__class__.__name__, self.name, self._lines)
+
 
 class FieldSection(abc.MutableMapping):
     # avoid metaclass conflict by keeping track of fields in a dict instead
@@ -103,6 +106,9 @@ class FieldSection(abc.MutableMapping):
 
     def __len__(self):
         return len(self._fields)
+
+    def __repr__(self):
+        return "{}({!r}, {!r})".format(self.__class__.__name__, self.name, self._fields)
 
 
 class EventsSection(LineSection):

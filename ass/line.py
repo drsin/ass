@@ -70,6 +70,10 @@ class _Line(object, metaclass=_WithFieldMeta):
 
         return cls(**fields, type_name=type_name)
 
+    def __repr__(self):
+        params = ", ".join("{}={!r}".format(k, self.fields[k]) for k in self.DEFAULT_FIELD_ORDER)
+        return "{}({})".format(self.__class__.__name__, params)
+
 
 class Unknown(_Line):
     value = _Field("Value", str, default="")
