@@ -5,12 +5,12 @@ with open("README.md", 'r') as fh:
 
 setup(
     name='ass',
-    version="0.4.4",
+    version="0.4.5",
     description="A library for parsing and manipulating Advanced SubStation Alpha subtitle files.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Tony Young",
-    # author_email="python-ass@chireiden.net",
+    # author_email="fichtefoll2@googlemail.com",
     keywords="ass subtitle substation alpha",
     packages=['ass'],
     url="http://github.com/chireiden/python-ass",
