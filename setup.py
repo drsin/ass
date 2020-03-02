@@ -5,7 +5,7 @@ with open("README.md", 'r') as fh:
 
 setup(
     name='ass',
-    version="0.5.0",
+    version="0.5.1",
     description="A library for parsing and manipulating Advanced SubStation Alpha subtitle files.",
     long_description=long_description,
     long_description_content_type="text/markdown",
