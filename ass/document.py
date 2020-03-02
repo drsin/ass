@@ -121,6 +121,12 @@ class Document(object):
 
         return doc
 
+    @classmethod
+    def parse_string(cls, string):
+        """ Parse an ASS document from a string.
+        """
+        return cls.parse_file(string.splitlines())
+
     def dump_file(self, f):
         """ Dump this ASS document to a file object.
         """
