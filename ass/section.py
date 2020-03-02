@@ -92,6 +92,9 @@ class FieldSection(abc.MutableMapping):
             raise ValueError("Fields must be a mutable mapping")
         self._fields = fields
 
+    def __contains__(self, key):
+        return key in self._fields
+
     def __getitem__(self, key):
         return self._fields[key]
 
@@ -109,6 +112,12 @@ class FieldSection(abc.MutableMapping):
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(self.__class__.__name__, self.name, self._fields)
+
+    def clear(self):  # Optional, but should be faster this way
+        return self._fields.clear()
+
+    def copy(self):
+        return self.__class__(self.name, self._fields.copy())
 
 
 class EventsSection(LineSection):
