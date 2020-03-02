@@ -1,7 +1,11 @@
 from .section import ScriptInfoSection, FieldSection, StylesSection, EventsSection, LineSection
 from ._util import CaseInsensitiveOrderedDict
 
-from .data import *  # noqa: F40  # re-export for compatibility
+from .line import *  # noqa: F40  # re-export for compatibility
+
+__all__ = [
+    "Document",
+]
 
 
 def _section_property(header):
