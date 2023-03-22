@@ -147,6 +147,11 @@ class Document(object):
             warnings.warn("It is recommended to write UTF-8 with BOM"
                           " using the '%s' encoding" % self.PREFERRED_ENCODING.name)
 
+        first = True
         for section in self.sections.values():
-            f.write("\n".join(section.dump()))
-            f.write("\n\n")
+            if not first:
+                f.write("\n")
+            for line in section.dump():
+                f.write(line)
+                f.write("\n")
+            first = False

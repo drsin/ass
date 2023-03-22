@@ -23,7 +23,7 @@ class TestDocument:
         out = StringIO()
         doc.dump_file(out)
 
-        assert out.getvalue().strip() == contents.strip()
+        assert out.getvalue() == contents
 
     def test_parse_encoding(self):
         with self.test_ass.open("r", encoding='utf_8') as f:
