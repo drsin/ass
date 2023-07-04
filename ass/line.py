@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from .data import Color, _WithFieldMeta, _Field, Tag
+from .data import Color, _WithFieldMeta, _Field
 
 __all__ = (
     'Unknown',
@@ -127,57 +127,6 @@ class Dialogue(_Event):
     """ A dialog event.
     """
     TYPE = "Dialogue"
-
-    def parse_parts(self):
-        # TODO remove; it's mostly broken
-        parts = []
-
-        current = []
-
-        backslash = False
-
-        it = iter(self.text)
-
-        for c in it:
-            if backslash:
-                if c == "{":
-                    current.append(c)
-                else:
-                    current.append("\\" + c)
-                backslash = False
-            elif c == "{":
-                if current:
-                    parts.append("".join(current))
-
-                current = []
-
-                tag_part = []
-
-                for c2 in it:
-                    if c2 == "}":
-                        break
-                    tag_part.append(c2)
-
-                parts.append(Tag.from_ass("".join(tag_part)))
-            elif c == "\\":
-                backslash = True
-            else:
-                current.append(c)
-
-        if backslash:
-            current.append("\\")
-
-        if current:
-            parts.append("".join(current))
-
-        return parts
-
-    def tags_stripped(self):
-        return Tag.strip_tags(self.parse())
-
-    def unparse_parts(self, parts):
-        self.text = "".join(n.dump() if isinstance(n, Tag) else n
-                            for n in parts)
 
 
 class Comment(_Event):
